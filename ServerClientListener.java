@@ -48,6 +48,21 @@ public class ServerClientListener implements Runnable {
             ex.printStackTrace();
         }
     }
+    public void broadcast(String msg, String username) {
+        try {
+            System.out.println("Broadcasting -- " + msg);
+            synchronized (clientList) {
+                for (ClientConnectionData c : clientList){
+                    if(c.getUserName().equals(username))
+                        c.getOut().println(msg);
+                }
+            }
+        } catch (Exception ex) {
+            System.out.println("broadcast caught exception: " + ex);
+            ex.printStackTrace();
+        }
+        
+    }
 
     public boolean isUsernameValid(String username) {
         for (ClientConnectionData c : clientList) {
@@ -85,10 +100,15 @@ public class ServerClientListener implements Runnable {
             while ((incoming = in.readLine().trim()) != null) {
                 if (incoming.startsWith("QUIT")) {
                     break;
-                } else if (incoming.startsWith("CHAT") && incoming.length() > 0) {
+                } else if (incoming.startsWith("CHAT") && incoming.length() > 5) {
                     String msg = String.format("CHAT %s %s", client.getUserName(), incoming.substring(4).trim());
                     broadcast(msg, client);
-                }
+                } else if (incoming.startsWith("PCHAT") && incoming.length() > 6) {
+                    String name = incoming.substring(5).trim().split(" ")[0];
+                    String incomingmsg = incoming.substring(6).trim().substring(name.length()).trim();
+                    String msg = String.format("PCHAT %s %s", client.getUserName(), incomingmsg);
+                    broadcast(msg,name);
+                }  
             }
         } catch (Exception ex) {
             if (ex instanceof SocketException) {

@@ -29,17 +29,28 @@ public class ChatClient {
 
         System.out.println("Starting chat");
     
-        String line = userInput.nextLine().trim();  
+        String input = userInput.nextLine().trim();  
 
-        while(! line.toLowerCase().startsWith("/quit")) {
+        while(! input.toLowerCase().startsWith("/quit")) {
             if (listener.state == 0) {
-                String msg = String.format("NAME %s", line); 
+                String msg = String.format("NAME %s", input); 
                 out.println(msg);
-                line = userInput.nextLine().trim();
+                input = userInput.nextLine().trim();
             } else if (listener.state == 1) {
-                String msg = String.format("CHAT %s", line); 
+                if(input.startsWith("@")){
+                    String name = input.substring(1).split(" ")[0];
+                    String usermsg = input.substring(name.length()+1).trim();
+                    
+                    String msg = String.format("PCHAT %s %s",name, usermsg); 
+                    out.println(msg);
+                    input = userInput.nextLine().trim();
+                }
+                else{
+                    String msg = String.format("CHAT %s", input); 
                 out.println(msg);
-                line = userInput.nextLine().trim();
+                input = userInput.nextLine().trim();
+                }
+                
             }
             
         }

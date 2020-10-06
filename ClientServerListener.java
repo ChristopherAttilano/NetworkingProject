@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 public class ClientServerListener implements Runnable {
 
@@ -22,7 +21,12 @@ public class ClientServerListener implements Runnable {
                     String name = incoming.substring(4).trim().split(" ")[0];
                     String msg = incoming.substring(4).trim().substring(name.toCharArray().length).trim();
                     System.out.println(name+":"+msg); 
+                }else if (incoming.startsWith("PCHAT")) {
+                    String name = incoming.substring(5).trim().split(" ")[0];
+                    String msg = incoming.substring(5).trim().substring(name.toCharArray().length).trim();
+                    System.out.println(name+"(private):"+msg); 
                 }
+                
                 //handle different headers
                 //WELCOME
                 //CHAT
