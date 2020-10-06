@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 public class ClientServerListener implements Runnable {
 
     BufferedReader socketIn;
+    int state = 0;
 
     @Override
     public void run() {
@@ -11,11 +12,18 @@ public class ClientServerListener implements Runnable {
             String incoming = "";
 
             while( (incoming = socketIn.readLine()) != null) {
+                if (incoming.startsWith("SUBMITNAME")) {
+                    state = 0;
+                    System.out.println("Please enter a username:");
+                }else if (incoming.startsWith("WELCOME")) {
+                    state = 1;
+                    String name = incoming.substring(7).trim();
+                    System.out.println("Welcome "+name); 
+                }
                 //handle different headers
                 //WELCOME
                 //CHAT
                 //EXIT
-                System.out.println(incoming);
             }
         } catch (Exception ex) {
             System.out.println("Exception caught in listener - " + ex);
