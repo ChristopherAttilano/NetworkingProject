@@ -1,5 +1,3 @@
-package day5_bca;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -29,13 +27,21 @@ public class ChatClient {
         Thread t = new Thread(listener);
         t.start();
 
-        System.out.print("Chat sessions has started - enter a user name: ");
-       
-        String line = userInput.nextLine().trim();
-        while(!line.toLowerCase().startsWith("/quit")) {
-            String msg = line;
-            out.println(msg);
-            line = userInput.nextLine().trim();
+        System.out.println("Starting chat");
+    
+        String line = userInput.nextLine().trim();  
+
+        while(! line.toLowerCase().startsWith("/quit")) {
+            if (listener.state == 0) {
+                String msg = String.format("NAME %s", line); 
+                out.println(msg);
+                line = userInput.nextLine().trim();
+            } else if (listener.state == 1) {
+                String msg = String.format("CHAT %s", line); 
+                out.println(msg);
+                line = userInput.nextLine().trim();
+            }
+            
         }
         out.println("QUIT");
         out.close();

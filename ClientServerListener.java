@@ -1,4 +1,3 @@
-package day5_bca;
 
 import java.io.BufferedReader;
 public class ClientServerListener implements Runnable {
@@ -19,6 +18,10 @@ public class ClientServerListener implements Runnable {
                     state = 1;
                     String name = incoming.substring(7).trim();
                     System.out.println("Welcome "+name); 
+                }else if(incoming.startsWith("CHAT")){
+                    String name = incoming.substring(4).trim().split(" ")[0];
+                    String msg = incoming.substring(4).trim().substring(name.toCharArray().length).trim();
+                    System.out.println(name+":"+msg); 
                 }
                 //handle different headers
                 //WELCOME

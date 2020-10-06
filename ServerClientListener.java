@@ -1,5 +1,3 @@
-package day5_bca;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.SocketException;
@@ -84,11 +82,11 @@ public class ServerClientListener implements Runnable {
 
             String incoming = "";
 
-            while ((incoming = in.readLine()) != null) {
+            while ((incoming = in.readLine().trim()) != null) {
                 if (incoming.startsWith("QUIT")) {
                     break;
-                } else if (incoming.length() > 0) {
-                    String msg = String.format("%s:%s", client.getUserName(), incoming);
+                } else if (incoming.startsWith("CHAT") && incoming.length() > 0) {
+                    String msg = String.format("CHAT %s %s", client.getUserName(), incoming.substring(4).trim());
                     broadcast(msg, client);
                 }
             }
