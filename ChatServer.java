@@ -1,11 +1,11 @@
 import java.net.Inet4Address;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -13,16 +13,24 @@ import java.io.PrintWriter;
 public class ChatServer {
     public static final int PORT = 54321;
     private static final ArrayList<ClientConnectionData> clientList = new ArrayList<>();
+    static File folder = new File(System.getProperty("user.dir")+"/Music");
+    static File[] listOfFiles = folder.listFiles();
+    static String[] listOfMusicNames;
+    
 
     public static void main(String[] args) throws Exception {
+        listOfMusicNames = new String[listOfFiles.length];
+        for (int i = 0; i < listOfFiles.length; i++) {
+            listOfMusicNames[i] = listOfFiles[i].getName();
+        }
         ExecutorService pool = Executors.newFixedThreadPool(100);
-
+        
         try (ServerSocket serverSocket = new ServerSocket(PORT)){
             System.out.println("Chat Server started.");
             System.out.println("Local IP: "
                     + Inet4Address.getLocalHost().getHostAddress());
             System.out.println("Local Port: " + serverSocket.getLocalPort());
-        
+            
             while (true) {
                 try {
                     Socket socket = serverSocket.accept();

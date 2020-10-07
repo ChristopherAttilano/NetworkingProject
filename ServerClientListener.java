@@ -1,13 +1,21 @@
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class ServerClientListener implements Runnable {
 
     // Maintain data about the client serviced by this thread
     ClientConnectionData client;
     ArrayList<ClientConnectionData> clientList;
+    File folder = new File(System.getProperty("user.dir") + "/Music");
+    File[] listOfFiles = folder.listFiles();
+    String[] listOfMusicNames;
 
     public ServerClientListener(ClientConnectionData client, ArrayList<ClientConnectionData> clientList) {
         this.client = client;
@@ -48,12 +56,13 @@ public class ServerClientListener implements Runnable {
             ex.printStackTrace();
         }
     }
+
     public void broadcast(String msg, String username) {
         try {
             System.out.println("Broadcasting -- " + msg);
             synchronized (clientList) {
-                for (ClientConnectionData c : clientList){
-                    if(c.getUserName().equals(username))
+                for (ClientConnectionData c : clientList) {
+                    if (c.getUserName().equals(username))
                         c.getOut().println(msg);
                 }
             }
@@ -61,21 +70,48 @@ public class ServerClientListener implements Runnable {
             System.out.println("broadcast caught exception: " + ex);
             ex.printStackTrace();
         }
-        
+
     }
 
     public boolean isUsernameValid(String username) {
         for (ClientConnectionData c : clientList) {
-            String temp = "NAME "+c.getUserName();
+            String temp = "NAME " + c.getUserName();
             if (c.getUserName() != null && temp.equals(username))
                 return false;
         }
         return username.matches("NAME [a-zA-Z]+");
     }
 
+    public void playSong(ClientConnectionData client, String song) {
+        if (!Arrays.asList(listOfMusicNames).contains(song)) {
+            System.out.println("song");
+            System.out.println(song);
+            return;
+        }
+        System.out.println("here");
+        try {
+            File mousicFile = new File(System.getProperty("user.dir") + "/Music/" + song);
+            InputStream in = new FileInputStream(mousicFile);
+            DataOutputStream out = new DataOutputStream(client.getSocket().getOutputStream());
+            byte[] data = new byte[4096];
+            int count;
+            client.getOut().println("PLAYMUSIC");
+            while ((count = in.read(data)) != -1) {
+                out.write(data, 0, count);
+            }
+            in.close();
+        } catch (Exception ex) {
+
+        }
+    }
+
     @Override
     public void run() {
         try {
+            listOfMusicNames = new String[listOfFiles.length];
+            for (int i = 0; i < listOfFiles.length; i++) {
+                listOfMusicNames[i] = listOfFiles[i].getName();
+            }
             BufferedReader in = client.getInput();
             // get userName, first message from user
             client.getOut().println("SUBMITNAME");
@@ -107,8 +143,12 @@ public class ServerClientListener implements Runnable {
                     String name = incoming.substring(5).trim().split(" ")[0];
                     String incomingmsg = incoming.substring(6).trim().substring(name.length()).trim();
                     String msg = String.format("PCHAT %s %s", client.getUserName(), incomingmsg);
-                    broadcast(msg,name);
-                }  
+                    broadcast(msg, name);
+                } else if (incoming.startsWith("PLAYMUSIC") && incoming.length() > 6) {
+                    playSong(client, incoming.substring(9).trim());
+                } else if (incoming.startsWith("GETMUSIC")) {
+                    broadcast("MUSICNAMES "+String.join(",", listOfMusicNames), client.getUserName());
+                }
             }
         } catch (Exception ex) {
             if (ex instanceof SocketException) {

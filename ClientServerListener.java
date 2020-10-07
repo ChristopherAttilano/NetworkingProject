@@ -1,7 +1,22 @@
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.net.Socket;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.TargetDataLine;
+
+
+
 public class ClientServerListener implements Runnable {
 
     BufferedReader socketIn;
+    Socket socket;
     int state = 0;
 
     @Override
@@ -25,8 +40,21 @@ public class ClientServerListener implements Runnable {
                     String name = incoming.substring(5).trim().split(" ")[0];
                     String msg = incoming.substring(5).trim().substring(name.toCharArray().length).trim();
                     System.out.println(name+"(private):"+msg); 
+                }  else if(incoming.startsWith("PLAYMUSIC")){
+                    try {
+                        InputStream  audioSrc = new DataInputStream(socket.getInputStream());
+                        InputStream bufferedIn = new BufferedInputStream(audioSrc);
+                        AudioInputStream audioStream = AudioSystem.getAudioInputStream(bufferedIn);
+                        Clip clip = AudioSystem.getClip(); 
+                        clip.open(audioStream); 
+                        clip.start();
+                    }
+                    catch(Exception ex){
+                        System.out.println("error "+ex);
+                    }
+                }else if(incoming.startsWith("MUSICNAMES")){
+                    System.out.println(incoming.substring(10).trim()); 
                 }
-                
                 //handle different headers
                 //WELCOME
                 //CHAT
@@ -39,7 +67,9 @@ public class ClientServerListener implements Runnable {
         }
     }
 
-	public ClientServerListener(BufferedReader socketIn) {
+	
+    public ClientServerListener(BufferedReader socketIn, Socket socket) {
         this.socketIn = socketIn;
+        this.socket = socket;
 	}
 }

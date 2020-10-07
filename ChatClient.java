@@ -23,7 +23,7 @@ public class ChatClient {
         out = new PrintWriter(socket.getOutputStream(), true);
 
         // start a thread to listen for server messages
-        ClientServerListener listener = new ClientServerListener(socketIn);
+        ClientServerListener listener = new ClientServerListener(socketIn,socket);
         Thread t = new Thread(listener);
         t.start();
 
@@ -43,13 +43,19 @@ public class ChatClient {
                     
                     String msg = String.format("PCHAT %s %s",name, usermsg); 
                     out.println(msg);
-                    input = userInput.nextLine().trim();
+                    
+                } else if(input.startsWith("!")){
+                    String msg = String.format("PLAYMUSIC %s",input.substring(1).trim()); 
+                    out.println(msg);
+                } else if(input.equals("?")){
+                    out.println("GETMUSIC");
                 }
                 else{
                     String msg = String.format("CHAT %s", input); 
                 out.println(msg);
-                input = userInput.nextLine().trim();
+                
                 }
+                input = userInput.nextLine().trim();
                 
             }
             
