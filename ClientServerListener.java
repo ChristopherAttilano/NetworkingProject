@@ -27,11 +27,11 @@ public class ClientServerListener implements Runnable {
             while( (incoming = socketIn.readLine()) != null) {
                 if (incoming.startsWith("SUBMITNAME")) {
                     state = 0;
-                    System.out.println("Please enter a username:");
+                    System.out.println("Enter your username:");
                 }else if (incoming.startsWith("WELCOME")) {
                     state = 1;
                     String name = incoming.substring(7).trim();
-                    System.out.println("Welcome "+name); 
+                    System.out.println(name+" has joined"); 
                 }else if(incoming.startsWith("CHAT")){
                     String name = incoming.substring(4).trim().split(" ")[0];
                     String msg = incoming.substring(4).trim().substring(name.toCharArray().length).trim();
@@ -54,6 +54,8 @@ public class ClientServerListener implements Runnable {
                     }
                 }else if(incoming.startsWith("MUSICNAMES")){
                     System.out.println(incoming.substring(10).trim()); 
+                }else if(incoming.startsWith("EXIT")){
+                    System.out.println(incoming.substring(4).trim()+" has left."); 
                 }
                 //handle different headers
                 //WELCOME

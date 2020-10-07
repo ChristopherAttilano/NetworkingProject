@@ -135,7 +135,7 @@ public class ServerClientListener implements Runnable {
 
             while ((incoming = in.readLine().trim()) != null) {
                 if (incoming.startsWith("QUIT")) {
-                    break;
+                    broadcast(client.getUserName(), client);
                 } else if (incoming.startsWith("CHAT") && incoming.length() > 5) {
                     String msg = String.format("CHAT %s %s", client.getUserName(), incoming.substring(4).trim());
                     broadcast(msg, client);

@@ -58,7 +58,6 @@ public class ChatClient {
                 input = userInput.nextLine().trim();
                 
             }
-            
         }
         out.println("QUIT");
         out.close();
