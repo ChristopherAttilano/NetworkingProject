@@ -1,46 +1,43 @@
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.net.Socket;
-
-import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
-import javax.sound.sampled.TargetDataLine;
 
 
 
 public class ClientServerListener implements Runnable {
-
-    BufferedReader socketIn;
     Socket socket;
+    ObjectInputStream  socketIn;
     int state = 0;
-
+    String peopleInRoom = "";
     @Override
     public void run() {
         try {
-            String incoming = "";
-
-            while( (incoming = socketIn.readLine()) != null) {
-                if (incoming.startsWith("SUBMITNAME")) {
+            Message incoming;
+            while(true) {
+                incoming = (Message) socketIn.readObject();
+                if (incoming.header.equals(incoming.SubmitNameHeader)) {
                     state = 0;
                     System.out.println("Enter your username:");
-                }else if (incoming.startsWith("WELCOME")) {
+                }else if (incoming.header.equals(incoming.WelcomeHeader)) {
+                    if(state == 0)
+                        System.out.println(peopleInRoom+" are in the chat");
                     state = 1;
-                    String name = incoming.substring(7).trim();
+                    String name = incoming.message;
                     System.out.println(name+" has joined"); 
-                }else if(incoming.startsWith("CHAT")){
-                    String name = incoming.substring(4).trim().split(" ")[0];
-                    String msg = incoming.substring(4).trim().substring(name.toCharArray().length).trim();
+                }else if(incoming.header.equals(incoming.ChatHeader)){
+                    String name = incoming.getSender();
+                    String msg = incoming.message.trim();
                     System.out.println(name+":"+msg); 
-                }else if (incoming.startsWith("PCHAT")) {
-                    String name = incoming.substring(5).trim().split(" ")[0];
-                    String msg = incoming.substring(5).trim().substring(name.toCharArray().length).trim();
+                }else if (incoming.header.equals(incoming.PChatHeader)) {
+                    String name = incoming.getSender();
+                    String msg = incoming.message.trim();
                     System.out.println(name+"(private):"+msg); 
-                }  else if(incoming.startsWith("PLAYMUSIC")){
+                }  else if(incoming.header.equals(incoming.PlayMusicHeader)){
                     try {
                         InputStream  audioSrc = new DataInputStream(socket.getInputStream());
                         InputStream bufferedIn = new BufferedInputStream(audioSrc);
@@ -52,10 +49,13 @@ public class ClientServerListener implements Runnable {
                     catch(Exception ex){
                         System.out.println("error "+ex);
                     }
-                }else if(incoming.startsWith("MUSICNAMES")){
-                    System.out.println(incoming.substring(10).trim()); 
-                }else if(incoming.startsWith("EXIT")){
-                    System.out.println(incoming.substring(4).trim()+" has left."); 
+                }else if(incoming.header.equals(incoming.GetMusicHeader)){
+                    System.out.println(incoming.message.trim()); 
+                }else if(incoming.header.equals(incoming.QuitHeader)){
+                    System.out.println(incoming.message.trim()+" has left."); 
+                }else if(incoming.header.equals(incoming.GetUsersHeader)){
+                    peopleInRoom = incoming.message.trim();
+                    // System.out.println(incoming.message.trim()+" are in the chat"); 
                 }
                 //handle different headers
                 //WELCOME
@@ -70,8 +70,8 @@ public class ClientServerListener implements Runnable {
     }
 
 	
-    public ClientServerListener(BufferedReader socketIn, Socket socket) {
+    public ClientServerListener(ObjectInputStream socketIn, Socket socket) {
         this.socketIn = socketIn;
         this.socket = socket;
-	}
+    }
 }
