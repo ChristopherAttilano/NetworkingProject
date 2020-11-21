@@ -155,7 +155,7 @@ public class ChatGuiClient extends Application {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        messageArea.appendText(username + ": " + message + "\n");
     }
 
     private Optional<ServerInfo> getServerIpAndPort() {
@@ -281,7 +281,7 @@ public class ChatGuiClient extends Application {
                     System.out.println("hello");
 
                     if (incoming.header.equals(incoming.WelcomeHeader)) {
-                        String user = incoming.getSender();
+                        String user = incoming.getMessage();
                         //got welcomed? Now you can send messages!
                         System.out.println("received username = " + user);
                         if (user.equals(username)) {
@@ -314,6 +314,7 @@ public class ChatGuiClient extends Application {
                             messageArea.appendText(user + "has left the chatroom.\n");
                         });
                     }
+                    Thread.sleep(100);
                 }
                 System.out.println("outside while loop");
             } catch (UnknownHostException e) {
