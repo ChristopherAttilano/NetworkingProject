@@ -1,7 +1,6 @@
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,7 +17,10 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ButtonBar.ButtonData;
-import javafx.scene.layout.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.stage.Stage;
 /**
  * For Java 8, javafx is installed with the JRE. You can run this program normally.
@@ -66,8 +68,6 @@ public class ChatGuiClient extends Application {
 
     private Stage stage;
     private TextArea messageArea;
-    private TextArea participantsArea;
-    private TextArea musicArea;
     private TextField textInput;
     private Button sendButton;
 
@@ -80,9 +80,8 @@ public class ChatGuiClient extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
         //If ip and port provided as command line arguments, use them
-
         List<String> args = getParameters().getUnnamed();
         if (args.size() == 2){
             this.serverInfo = new ServerInfo(args.get(0), Integer.parseInt(args.get(1)));
@@ -119,15 +118,6 @@ public class ChatGuiClient extends Application {
         hbox.getChildren().addAll(new Label("Message: "), textInput, sendButton);
         HBox.setHgrow(textInput, Priority.ALWAYS);
         borderPane.setBottom(hbox);
-        participantsArea = new TextArea();
-        participantsArea.setWrapText(true);
-        participantsArea.setEditable(false);
-        borderPane.setLeft(participantsArea);
-
-        musicArea = new TextArea();
-        musicArea.setWrapText(true);
-        musicArea.setEditable(false);
-        borderPane.setRight(musicArea);
 
         Scene scene = new Scene(borderPane, 400, 500);
         stage.setTitle("Chat Client");
@@ -139,59 +129,33 @@ public class ChatGuiClient extends Application {
         //Handle GUI closed event
         stage.setOnCloseRequest(e -> {
             try {
-                out.println("QUIT");
                 outputStream.writeObject(new Message("QuitHeader", ""));
-                socketListener.appRunning = false;
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+            socketListener.appRunning = false;
+            try {
                 socket.close();
-            } catch (IOException ex) {}
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         });
 
         new Thread(socketListener).start();
     }
 
     private void sendMessage() {
+        String message = textInput.getText().trim();
+        if (message.length() == 0)
+            return;
+        textInput.clear();
+        Message msg = new Message("ChatHeader", message);
         try {
-            String message = textInput.getText().trim();
-            if (message.length() == 0)
-                return;
+            outputStream.writeObject(msg);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-            Message mesg;
-
-            if (message.startsWith("@")) {
-                mesg = new Message("PChatHeader", "");
-                ArrayList<String> recipients = new ArrayList<>();
-
-                String[] s = message.split(" ");
-                if (s.length < 2) {
-                    System.out.println("Invalid pm syntax: @user @user .... message");
-                } else {
-                    String content = "";
-                    int msgStart = 0;
-
-                    for (int i = 0; i < s.length; i++) {
-                        if (s[i].startsWith("@")) {
-                            recipients.add(s[i].substring(1));
-                            msgStart = i + s[i].substring(1).length();
-                        }
-                    }
-                    content = message.substring(msgStart);
-                    mesg.setMessage(content);
-                    mesg.setRecipients(recipients);
-                    outputStream.writeObject(mesg);
-                    outputStream.flush();
-                    String pMessaged = recipients.get(0);
-                    if (recipients.size() > 1) {
-                        for (int i = 1; i < recipients.size(); i++) {
-                            pMessaged += ", " + recipients.get(0);
-                        }
-                    }
-                    messageArea.appendText("WHISPERED TO " + pMessaged + ": " + content + "\n");
-
-                }
-            }
-            textInput.clear();
-            out.println("CHAT " + message);
-        } catch (Exception e) {}
     }
 
     private Optional<ServerInfo> getServerIpAndPort() {
@@ -277,96 +241,81 @@ public class ChatGuiClient extends Application {
         return username;
     }
 
-    private void showUsers(ArrayList<String> users){
-        participantsArea.clear();
-        participantsArea.appendText("You\n");
-        for (String user:users){
-            if(username.equals(user)) {
-            }
-            else{
-                participantsArea.appendText(user + "\n");
-            }
-        }
-    }
-
     class ServerListener implements Runnable {
 
         volatile boolean appRunning = false;
 
         public void run() {
             try {
-                ArrayList<String> users = new ArrayList<>();
                 // Set up the socket for the Gui
                 socket = new Socket(serverInfo.serverAddress, serverInfo.serverPort);
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
-                outputStream = new ObjectOutputStream(socket.getOutputStream());
                 inputStream = new ObjectInputStream(socket.getInputStream());
-                Message msg = new Message("", "");
+                outputStream = new ObjectOutputStream(socket.getOutputStream());
 
                 appRunning = true;
+                System.out.println("appRunning: " + appRunning);
                 //Ask the gui to show the username dialog and update username
                 //Send to the server
                 Platform.runLater(() -> {
-                    out.println(getName());
+                    String name = getName();
+                    System.out.println("--------------------\nusername:"+username);
+                    System.out.println("name: " + name);
+                    Message nameMsg = new Message("SumitNameHeader", name);
                     try {
-                        outputStream.writeObject(new Message(msg.SubmitNameHeader, getName()));
-                        outputStream.flush();
+                        outputStream.writeObject(nameMsg);
+                        System.out.println("submitted name: " + nameMsg.getMessage() + "\n--------------------");
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 });
 
                 //handle all kinds of incoming messages
-                Message incoming = (Message)inputStream.readObject();
-                System.out.println(incoming.getMessage());
-                System.out.println("hi");
+                Message incoming;
+                System.out.println("here");
+                while (appRunning && (incoming = (Message) inputStream.readObject())!=null) {
+                    System.out.println("inside while loop");
+                    System.out.println("test");
+                    System.out.println("appRunning inside while loop: " + appRunning);
+                    System.out.println("hello");
 
-                while (appRunning && !incoming.equals(null)) {
-                    System.out.println("i made it here");
-                    if (incoming.getHeader().equals(msg.WelcomeHeader)) {
-                        String user = incoming.getMessage();
+                    if (incoming.header.equals(incoming.WelcomeHeader)) {
+                        String user = incoming.getSender();
                         //got welcomed? Now you can send messages!
+                        System.out.println("received username = " + user);
                         if (user.equals(username)) {
+                            System.out.println("received name is same as client name");
                             Platform.runLater(() -> {
                                 stage.setTitle("Chatter - " + username);
                                 textInput.setEditable(true);
                                 sendButton.setDisable(false);
                                 messageArea.appendText("Welcome to the chatroom, " + username + "!\n");
-                                users.add(username);
+                                System.out.println("set button active and input field editable");
                             });
                         }
                         else {
+                            System.out.println("Client name is not received name");
                             Platform.runLater(() -> {
                                 messageArea.appendText(user + " has joined the chatroom.\n");
-                                users.add(incoming.getMessage());
                             });
                         }
-                        Platform.runLater(() -> {
-                            showUsers(users);
-                        });
 
-                    } else if (incoming.getHeader().equals(msg.ChatHeader)) {
+                    } else if (incoming.getHeader().equals(incoming.ChatHeader)) {
                         String user = incoming.getSender();
-                        String message = incoming.getMessage();
+                        String msg = incoming.getMessage();
 
                         Platform.runLater(() -> {
-                            messageArea.appendText(user + ": " + message + "\n");
+                            messageArea.appendText(user + ": " + msg + "\n");
                         });
-                    } else if (incoming.getHeader().equals(msg.QuitHeader)) {
+                    } else if (incoming.getHeader().equals(incoming.QuitHeader)) {
                         String user = incoming.getSender();
                         Platform.runLater(() -> {
                             messageArea.appendText(user + "has left the chatroom.\n");
-                            users.remove(username);
-                            showUsers(users);
-                        });
-                    } else if (incoming.getHeader().equals(msg.PChatHeader)) {
-                        String user = incoming.getSender();
-                        Platform.runLater(() -> {
-                            messageArea.appendText(user + " whispers: " + incoming.getMessage());
                         });
                     }
                 }
+                System.out.println("outside while loop");
             } catch (UnknownHostException e) {
                 e.printStackTrace();
             } catch (Exception e) {
@@ -382,6 +331,7 @@ public class ChatGuiClient extends Application {
                         socket.close();
                 }
                 catch (IOException e){
+                    e.printStackTrace();
                 }
             }
         }
