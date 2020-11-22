@@ -175,10 +175,10 @@ public class ChatGuiClient extends Application {
             ArrayList<String> recipients = new ArrayList<String>();
             int index = 0;
             for (int i = 0; i < temp.length; i++) {
-                if(temp[i].startsWith("@"))
+                if(temp[i].startsWith("@")) {
                     recipients.add(temp[i].substring(1));
-                else{
-                    index = message.indexOf(temp[i]);
+                    index += temp[i].length();
+                } else{
                     break;
                 }
             }
@@ -348,10 +348,11 @@ public class ChatGuiClient extends Application {
                     } else if (incoming.getHeader().equals(incoming.PChatHeader)) {
                         String user = incoming.getSender();
                         String msg = incoming.getMessage();
-
-                        Platform.runLater(() -> {
-                            messageArea.appendText(user + " (Private): " + msg + "\n");
-                        });
+                       if (!user.equals(username)) {
+                           Platform.runLater(() -> {
+                               messageArea.appendText(user + " (Private): " + msg + "\n");
+                           });
+                       }
                     } else if (incoming.getHeader().equals(incoming.QuitHeader)) {
                         String user = incoming.getSender();
                         Platform.runLater(() -> {

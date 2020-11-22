@@ -42,10 +42,10 @@ public class ChatClient {
                     ArrayList<String> recipients = new ArrayList<String>();
                     int index = 0;
                     for (int i = 0; i < temp.length; i++) {
-                        if(temp[i].startsWith("@"))
+                        if(temp[i].startsWith("@")) {
                             recipients.add(temp[i].substring(1));
-                        else{
-                            index = input.indexOf(temp[i]);
+                            index += temp[i].length();
+                        } else{
                             break;
                         }
                     }
