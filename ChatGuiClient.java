@@ -70,6 +70,7 @@ public class ChatGuiClient extends Application {
     private Stage stage;
     private TextArea messageArea;
     private TextArea participantsArea;
+    private TextArea musicArea;
     private TextField textInput;
     private Button sendButton;
 
@@ -111,8 +112,16 @@ public class ChatGuiClient extends Application {
         participantsArea = new TextArea();
         participantsArea.setWrapText(true);
         participantsArea.setEditable(false);
+        participantsArea.setPrefWidth(150);
         borderPane.setCenter(participantsArea);
-        participantsArea.appendText("Participants:\n");
+        participantsArea.setText("Participants:\n");
+
+        musicArea = new TextArea();
+        musicArea.setWrapText(true);
+        musicArea.setEditable(false);
+        musicArea.setPrefHeight(100);
+        borderPane.setTop(musicArea);
+        musicArea.setText("Played Song:\nN/A");
 
         //At first, can't send messages - wait for WELCOME!
         textInput = new TextField();
@@ -155,6 +164,7 @@ public class ChatGuiClient extends Application {
     private void sendMessage() {
         String message = textInput.getText().trim();
         Message msg;
+        boolean privateMessage = false;
 
         if (message.length() == 0)
             return;
@@ -174,6 +184,13 @@ public class ChatGuiClient extends Application {
             }
             msg = new Message("PChatHeader", message.substring(index).trim());
             msg.setRecipients(recipients);
+            privateMessage = true;
+        }  else if(message.startsWith("!")){
+            msg = new Message("PlayMusicHeader", message.substring(1).trim());
+            musicArea.setText("Played song:\n");
+            musicArea.appendText(message.substring(1).trim());
+        } else if(message.equals("?")){
+            msg = new Message("GetMusicHeader", "");
         } else {
             msg = new Message("ChatHeader", message);
         }
@@ -182,7 +199,11 @@ public class ChatGuiClient extends Application {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        messageArea.appendText(username + ": " + message + "\n");
+        if (privateMessage) {
+            messageArea.appendText(username + " (Private): " + message + "\n");
+        } else {
+            messageArea.appendText(username + ": " + message + "\n");
+        }
     }
 
     private Optional<ServerInfo> getServerIpAndPort() {
@@ -324,6 +345,13 @@ public class ChatGuiClient extends Application {
                         Platform.runLater(() -> {
                             messageArea.appendText(user + ": " + msg + "\n");
                         });
+                    } else if (incoming.getHeader().equals(incoming.PChatHeader)) {
+                        String user = incoming.getSender();
+                        String msg = incoming.getMessage();
+
+                        Platform.runLater(() -> {
+                            messageArea.appendText(user + " (Private): " + msg + "\n");
+                        });
                     } else if (incoming.getHeader().equals(incoming.QuitHeader)) {
                         String user = incoming.getSender();
                         Platform.runLater(() -> {
@@ -335,6 +363,8 @@ public class ChatGuiClient extends Application {
                         for (int i=0; i<users.length; i++) {
                             participantsArea.appendText(users[i]);
                         }
+                    } else if (incoming.getHeader().equals(incoming.GetMusicHeader)) {
+                        messageArea.appendText("Available music: " + incoming.getMessage());
                     }
                     Thread.sleep(100);
                 }
