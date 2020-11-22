@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,6 +69,7 @@ public class ChatGuiClient extends Application {
 
     private Stage stage;
     private TextArea messageArea;
+    private TextArea participantsArea;
     private TextField textInput;
     private Button sendButton;
 
@@ -104,7 +106,13 @@ public class ChatGuiClient extends Application {
         messageArea = new TextArea();
         messageArea.setWrapText(true);
         messageArea.setEditable(false);
-        borderPane.setCenter(messageArea);
+        borderPane.setRight(messageArea);
+
+        participantsArea = new TextArea();
+        participantsArea.setWrapText(true);
+        participantsArea.setEditable(false);
+        borderPane.setCenter(participantsArea);
+        participantsArea.appendText("Participants:\n");
 
         //At first, can't send messages - wait for WELCOME!
         textInput = new TextField();
@@ -119,7 +127,7 @@ public class ChatGuiClient extends Application {
         HBox.setHgrow(textInput, Priority.ALWAYS);
         borderPane.setBottom(hbox);
 
-        Scene scene = new Scene(borderPane, 400, 500);
+        Scene scene = new Scene(borderPane, 700, 500);
         stage.setTitle("Chat Client");
         stage.setScene(scene);
         stage.show();
@@ -146,10 +154,29 @@ public class ChatGuiClient extends Application {
 
     private void sendMessage() {
         String message = textInput.getText().trim();
+        Message msg;
+
         if (message.length() == 0)
             return;
+
         textInput.clear();
-        Message msg = new Message("ChatHeader", message);
+        if(message.startsWith("@")){
+            String[] temp = message.split(" ");
+            ArrayList<String> recipients = new ArrayList<String>();
+            int index = 0;
+            for (int i = 0; i < temp.length; i++) {
+                if(temp[i].startsWith("@"))
+                    recipients.add(temp[i].substring(1));
+                else{
+                    index = message.indexOf(temp[i]);
+                    break;
+                }
+            }
+            msg = new Message("PChatHeader", message.substring(index).trim());
+            msg.setRecipients(recipients);
+        } else {
+            msg = new Message("ChatHeader", message);
+        }
         try {
             outputStream.writeObject(msg);
         } catch (IOException e) {
@@ -255,17 +282,13 @@ public class ChatGuiClient extends Application {
                 outputStream = new ObjectOutputStream(socket.getOutputStream());
 
                 appRunning = true;
-                System.out.println("appRunning: " + appRunning);
                 //Ask the gui to show the username dialog and update username
                 //Send to the server
                 Platform.runLater(() -> {
                     String name = getName();
-                    System.out.println("--------------------\nusername:"+username);
-                    System.out.println("name: " + name);
                     Message nameMsg = new Message("SumitNameHeader", name);
                     try {
                         outputStream.writeObject(nameMsg);
-                        System.out.println("submitted name: " + nameMsg.getMessage() + "\n--------------------");
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -273,29 +296,22 @@ public class ChatGuiClient extends Application {
 
                 //handle all kinds of incoming messages
                 Message incoming;
-                System.out.println("here");
+                Message getUsers = new Message("GetUsersHeader", "");
                 while (appRunning && (incoming = (Message) inputStream.readObject())!=null) {
-                    System.out.println("inside while loop");
-                    System.out.println("test");
-                    System.out.println("appRunning inside while loop: " + appRunning);
-                    System.out.println("hello");
+                    outputStream.writeObject(getUsers);
 
                     if (incoming.header.equals(incoming.WelcomeHeader)) {
                         String user = incoming.getMessage();
                         //got welcomed? Now you can send messages!
-                        System.out.println("received username = " + user);
                         if (user.equals(username)) {
-                            System.out.println("received name is same as client name");
                             Platform.runLater(() -> {
                                 stage.setTitle("Chatter - " + username);
                                 textInput.setEditable(true);
                                 sendButton.setDisable(false);
                                 messageArea.appendText("Welcome to the chatroom, " + username + "!\n");
-                                System.out.println("set button active and input field editable");
                             });
                         }
                         else {
-                            System.out.println("Client name is not received name");
                             Platform.runLater(() -> {
                                 messageArea.appendText(user + " has joined the chatroom.\n");
                             });
@@ -313,10 +329,15 @@ public class ChatGuiClient extends Application {
                         Platform.runLater(() -> {
                             messageArea.appendText(user + "has left the chatroom.\n");
                         });
+                    } else if (incoming.getHeader().equals(incoming.GetUsersHeader)) {
+                        participantsArea.setText("Participants:\n");
+                        String[] users = incoming.getMessage().split(", ");
+                        for (int i=0; i<users.length; i++) {
+                            participantsArea.appendText(users[i]);
+                        }
                     }
                     Thread.sleep(100);
                 }
-                System.out.println("outside while loop");
             } catch (UnknownHostException e) {
                 e.printStackTrace();
             } catch (Exception e) {
