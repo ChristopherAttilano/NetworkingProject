@@ -319,7 +319,6 @@ public class ChatGuiClient extends Application {
                 Message incoming;
                 Message getUsers = new Message("GetUsersHeader", "");
                 while (appRunning && (incoming = (Message) inputStream.readObject())!=null) {
-                    outputStream.writeObject(getUsers);
 
                     if (incoming.header.equals(incoming.WelcomeHeader)) {
                         String user = incoming.getMessage();
@@ -330,6 +329,7 @@ public class ChatGuiClient extends Application {
                                 textInput.setEditable(true);
                                 sendButton.setDisable(false);
                                 messageArea.appendText("Welcome to the chatroom, " + username + "!\n");
+
                             });
                         }
                         else {
@@ -337,6 +337,7 @@ public class ChatGuiClient extends Application {
                                 messageArea.appendText(user + " has joined the chatroom.\n");
                             });
                         }
+                        outputStream.writeObject(getUsers);
 
                     } else if (incoming.getHeader().equals(incoming.ChatHeader)) {
                         String user = incoming.getSender();
@@ -358,6 +359,7 @@ public class ChatGuiClient extends Application {
                         Platform.runLater(() -> {
                             messageArea.appendText(user + "has left the chatroom.\n");
                         });
+                        outputStream.writeObject(getUsers);
                     } else if (incoming.getHeader().equals(incoming.GetUsersHeader)) {
                         participantsArea.setText("Participants:\n");
                         String[] users = incoming.getMessage().split(", ");
@@ -379,6 +381,11 @@ public class ChatGuiClient extends Application {
                 Platform.runLater(() -> {
                     stage.close();
                 });
+                try {
+                    outputStream.writeObject(new Message("QuitHeader", ""));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 try {
                     if (socket != null)
                         socket.close();
