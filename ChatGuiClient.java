@@ -348,11 +348,11 @@ public class ChatGuiClient extends Application {
                     } else if (incoming.getHeader().equals(incoming.PChatHeader)) {
                         String user = incoming.getSender();
                         String msg = incoming.getMessage();
-                       if (!user.equals(username)) {
-                           Platform.runLater(() -> {
-                               messageArea.appendText(user + " (Private): " + msg + "\n");
-                           });
-                       }
+                        if (!user.equals(username)) {
+                            Platform.runLater(() -> {
+                                messageArea.appendText(user + " (Private): " + msg + "\n");
+                            });
+                        }
                     } else if (incoming.getHeader().equals(incoming.QuitHeader)) {
                         String user = incoming.getSender();
                         Platform.runLater(() -> {
