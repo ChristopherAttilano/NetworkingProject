@@ -23,6 +23,11 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.stage.Stage;
+
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+
 /**
  * For Java 8, javafx is installed with the JRE. You can run this program normally.
  * For Java 9+, you must install JavaFX separately: https://openjfx.io/openjfx-docs/
@@ -70,7 +75,8 @@ public class ChatGuiClient extends Application {
     private Stage stage;
     private TextArea messageArea;
     private TextArea participantsArea;
-    private TextArea musicArea;
+    private TextField musicArea;
+    private Button pausePlayButton;
     private TextField textInput;
     private Button sendButton;
 
@@ -116,12 +122,14 @@ public class ChatGuiClient extends Application {
         borderPane.setCenter(participantsArea);
         participantsArea.setText("Participants:\n");
 
-        musicArea = new TextArea();
-        musicArea.setWrapText(true);
+        musicArea = new TextField();
         musicArea.setEditable(false);
-        musicArea.setPrefHeight(100);
-        borderPane.setTop(musicArea);
-        musicArea.setText("Played Song:\nN/A");
+        pausePlayButton = new Button("Pause");
+        pausePlayButton.setDisable(true);
+        HBox musicBox = new HBox();
+        musicBox.getChildren().addAll(new Label("Played Song"), musicArea, pausePlayButton);
+        HBox.setHgrow(musicArea, Priority.ALWAYS);
+        borderPane.setTop(musicBox);
 
         //At first, can't send messages - wait for WELCOME!
         textInput = new TextField();
@@ -161,6 +169,16 @@ public class ChatGuiClient extends Application {
         new Thread(socketListener).start();
     }
 
+    private void pausePlay(Clip music) {
+        if (pausePlayButton.getText().equals("Pause")) {
+            music.stop();
+            pausePlayButton.setText("Play");
+        } else {
+            music.start();
+            pausePlayButton.setText("Pause");
+        }
+    }
+
     private void sendMessage() {
         String message = textInput.getText().trim();
         Message msg;
@@ -187,8 +205,7 @@ public class ChatGuiClient extends Application {
             privateMessage = true;
         }  else if(message.startsWith("!")){
             msg = new Message("PlayMusicHeader", message.substring(1).trim());
-            musicArea.setText("Played song:\n");
-            musicArea.appendText(message.substring(1).trim());
+            musicArea.setText(message.substring(1).trim());
         } else if(message.equals("?")){
             msg = new Message("GetMusicHeader", "");
         } else {
@@ -328,6 +345,7 @@ public class ChatGuiClient extends Application {
                                 stage.setTitle("Chatter - " + username);
                                 textInput.setEditable(true);
                                 sendButton.setDisable(false);
+                                pausePlayButton.setDisable(false);
                                 messageArea.appendText("Welcome to the chatroom, " + username + "!\n");
 
                             });
@@ -367,7 +385,25 @@ public class ChatGuiClient extends Application {
                             participantsArea.appendText(users[i]);
                         }
                     } else if (incoming.getHeader().equals(incoming.GetMusicHeader)) {
-                        messageArea.appendText("Available music: " + incoming.getMessage());
+                        String[] musicList = incoming.getMessage().split(",");
+                        messageArea.appendText("----------------------------------\nAvailable music: \n");
+                        for (int i=0; i<musicList.length; i++) {
+                            messageArea.appendText(musicList[i] + "\n");
+                        }
+                        messageArea.appendText("----------------------------------\n");
+                    } else if(incoming.header.equals(incoming.PlayMusicHeader)){
+                        try {
+                            InputStream  audioSrc = new DataInputStream(socket.getInputStream());
+                            InputStream bufferedIn = new BufferedInputStream(audioSrc);
+                            AudioInputStream audioStream = AudioSystem.getAudioInputStream(bufferedIn);
+                            Clip clip = AudioSystem.getClip();
+                            pausePlayButton.setOnAction(e -> pausePlay(clip));
+                            clip.open(audioStream);
+                            clip.start();
+                        }
+                        catch(Exception ex){
+                            System.out.println("error "+ex);
+                        }
                     }
                     Thread.sleep(100);
                 }
